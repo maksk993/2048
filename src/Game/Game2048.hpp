@@ -46,7 +46,7 @@ class Game2048 {
         0.5f, 0.0f,   0.75f, 0.0f,   0.75f, 0.25f,   0.5f, 0.25f, // 16384
         0.75f, 0.0f,   1.0f, 0.0f,   1.0f, 0.25f,   0.75f, 0.25f // 32768
     };
-    std::shared_ptr<Texture> countTextures;
+    std::shared_ptr<Texture> cellTexture;
 
     bool zPressed = false;
     bool ctrlPressed = false;

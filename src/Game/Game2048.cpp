@@ -6,7 +6,7 @@ Game2048::Game2048(GLFWwindow* _window) {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keysCallback);
 
-    countTextures = std::make_shared<Texture>("res/textures/cells.png");
+    cellTexture = std::make_shared<Texture>("res/textures/cells.png");
 
     srand(time(NULL));
     fieldInit();
@@ -52,6 +52,7 @@ void Game2048::showCellTex(size_t count) {
         _count >>= 1;
     } while (_count);
     int offset = number_of_bits * 8; // 8 because 2 (coords (x, y) for vertex) * 4 (number of vertices)
+    if (offset >= 128) offset = 0;
     
     glVertexPointer(2, GL_FLOAT, 0, vertices);
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -60,7 +61,7 @@ void Game2048::showCellTex(size_t count) {
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
     glEnable(GL_TEXTURE_2D);
-    countTextures->bind();
+    cellTexture->bind();
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     glDisableClientState(GL_VERTEX_ARRAY);
