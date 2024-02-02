@@ -13,6 +13,12 @@ Game2048::Game2048(GLFWwindow* _window) {
 }
 
 void Game2048::run() {
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, vertices);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnable(GL_TEXTURE_2D);
+    cellTexture->bind();
+
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -20,6 +26,10 @@ void Game2048::run() {
 
         glfwSwapBuffers(window);
     }
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisable(GL_TEXTURE_2D);
 }
 
 void Game2048::fieldInit() {
@@ -54,18 +64,8 @@ void Game2048::showCellTex(size_t count) {
     int offset = number_of_bits * 8; // 8 because 2 (coords (x, y) for vertex) * 4 (number of vertices)
     if (offset >= 128) offset = 0;
     
-    glVertexPointer(2, GL_FLOAT, 0, vertices);
-    glEnableClientState(GL_VERTEX_ARRAY);
-
     glTexCoordPointer(2, GL_FLOAT, 0, texCoords + offset);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glEnable(GL_TEXTURE_2D);
-    cellTexture->bind();
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 bool Game2048::isCellInField(int x, int y) {

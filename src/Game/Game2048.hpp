@@ -70,7 +70,7 @@ class Game2048 {
     void mergeCells(int x, int y, int dx, int dy);
 
 public:
-    Game2048(GLFWwindow* window);
+    Game2048(GLFWwindow* _window);
     void run();
 };
 
