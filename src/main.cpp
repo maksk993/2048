@@ -30,7 +30,7 @@ int main() {
         return -1;
     }
 
-    Game2048 game(window);
+    Game2048 game(window, window_width, window_height);
 
     game.run();
 

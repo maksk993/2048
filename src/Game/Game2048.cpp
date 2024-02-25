@@ -1,24 +1,23 @@
 #include "Game2048.hpp"
 
-Game2048::Game2048(GLFWwindow* _window) {
-    window = _window;
-
+Game2048::Game2048(GLFWwindow* _window, size_t width, size_t height) : window(_window), m_windowWidth(width), m_windowHeight(height) {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keysCallback);
-
-    cellTexture = std::make_shared<Texture>("res/textures/cells.png");
-
     srand(time(NULL));
+
+    cellWidthAndHeight = FlexibleSizes::getSize(m_windowWidth, FIELD_WIDTH);
+
+    std::shared_ptr<Texture> cellTexture = std::make_shared<Texture>("res/textures/cells.png");
+    cellShaderProg = std::make_shared<ShaderProgram>("res/shaders/vSprite.txt", "res/shaders/fSprite.txt");
+    for (size_t i = 0, j = 0; j < texCoords.size(); i <<= 1, j++) {
+        cellSpriteMap[i] = std::make_shared<Sprite>(cellTexture, cellShaderProg, glm::vec2(0.f), glm::vec2(cellWidthAndHeight), 0.f, texCoords[j]);
+        if (i == 0) i++;
+    }
+
     fieldInit();
 }
 
 void Game2048::run() {
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(2, GL_FLOAT, 0, vertices);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnable(GL_TEXTURE_2D);
-    cellTexture->bind();
-
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -26,10 +25,6 @@ void Game2048::run() {
 
         glfwSwapBuffers(window);
     }
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisable(GL_TEXTURE_2D);
 }
 
 void Game2048::fieldInit() {
@@ -40,36 +35,22 @@ void Game2048::fieldInit() {
 }
 
 void Game2048::showGame() {
-    glLoadIdentity();
-    glScalef(2.0f / FIELD_WIDTH, 2.0f / FIELD_HEIGHT, 1.0f);
-    glTranslatef(-FIELD_WIDTH * 0.5, -FIELD_HEIGHT * 0.5, 0);
+    cellShaderProg->use();
+    cellShaderProg->setInt("tex", 0);
+
+    glm::mat4 projectionMatrix = glm::ortho(0.f, static_cast<float>(m_windowWidth), 0.f, static_cast<float>(m_windowHeight), -1.f, 1.f);
+    cellShaderProg->setMatrix4("projectionMat", projectionMatrix);
 
     for (size_t j = 0; j < FIELD_HEIGHT; j++) {
         for (size_t i = 0; i < FIELD_WIDTH; i++) {
-            glPushMatrix();
-            glTranslatef(i, j, 0.0f);
-            showCellTex(field[i][j].count);
-            glPopMatrix();
+            cellSpriteMap[field[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+            cellSpriteMap[field[j][i].count]->render();
         }
     }
 }
 
-void Game2048::showCellTex(size_t count) {
-    int number_of_bits = -1;
-    size_t _count = count;
-    do {
-        number_of_bits++;
-        _count >>= 1;
-    } while (_count);
-    int offset = number_of_bits * 8; // 8 because 2 (coords (x, y) for vertex) * 4 (number of vertices)
-    if (offset >= 128) offset = 0;
-    
-    glTexCoordPointer(2, GL_FLOAT, 0, texCoords + offset);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-}
-
 bool Game2048::isCellInField(int x, int y) {
-    return x >= 0 && y >= 0 && x < FIELD_WIDTH&& y < FIELD_HEIGHT;
+    return x >= 0 && y >= 0 && x < FIELD_WIDTH && y < FIELD_HEIGHT;
 }
 
 void Game2048::generateNewCell() {

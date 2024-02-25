@@ -1,0 +1,12 @@
+#version 330 core
+layout(location = 0) in vec2 vertex_pos;
+layout(location = 1) in vec2 tex_coords;
+out vec2 texCoords;
+
+uniform mat4 modelMat;
+uniform mat4 projectionMat;
+
+void main() {
+	texCoords = tex_coords;
+	gl_Position = projectionMat * modelMat * vec4(vertex_pos, 0.0, 1.0);
+}

@@ -1,14 +1,12 @@
 #pragma once
-#ifndef __TEXTURE_HPP__
-#define __TEXTURE_HPP__
 
+#include "stb_image.h"
 #include <glad/glad.h>
+
 #include <iostream>
 #include <string>
 
-#include "stb_image.h"
-
-class Texture {
+class Texture { // Работа с текстурами
 public:
 	Texture(const std::string& texturePath,
         const unsigned int channels = 4,
@@ -27,11 +25,10 @@ public:
     void bind() const;
 
 private:
+    GLuint m_ID = 0;
     GLenum m_filter;
     GLenum m_wrapmode;
     GLenum m_mode;
-
-    GLuint m_ID;
 
     unsigned int m_width;
     unsigned int m_height;
@@ -39,5 +36,3 @@ private:
     std::string load(const std::string& path);
     void createTexture(const unsigned int channels, const unsigned char* pixels);
 };
-
-#endif // !__TEXTURE_HPP__

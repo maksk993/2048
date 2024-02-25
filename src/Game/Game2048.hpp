@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef __GAME2048_HPP__
-#define __GAME2048_HPP__
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -8,10 +6,14 @@
 #include <time.h>
 #include <memory>
 #include <utility>
-#include "../Graphics/Texture.hpp"
+#include <unordered_map>
+#include "../Graphics/Sprite.hpp"
+#include "../Utilities/FlexibleSizes.hpp"
 
 class Game2048 {
     GLFWwindow* window;
+    const size_t m_windowWidth;
+    const size_t m_windowHeight;
 
     static const int FIELD_WIDTH = 4;
     static const int FIELD_HEIGHT = 4;
@@ -24,29 +26,30 @@ class Game2048 {
     Cell field[FIELD_WIDTH][FIELD_HEIGHT];
     Cell previousFieldState[FIELD_WIDTH][FIELD_HEIGHT];
 
-    GLfloat vertices[8] = { 0.0f, 0.0f,   1.0f, 0.0f,   1.0f, 1.0f,   0.0f, 1.0f }; // size 8 because 2 coords (x, y) for each of 4 vertices (2 * 4 = 8)
-    GLfloat texCoords[128] = {
-        0.0f, 0.75f,   0.25f, 0.75f,   0.25f, 1.0f,   0.0f, 1.0f, // empty cell
-        0.25f, 0.75f,   0.5f, 0.75f,   0.5f, 1.0f,   0.25f, 1.0f, // 2
-        0.5f, 0.75f,   0.75f, 0.75f,   0.75f, 1.0f,   0.5f, 1.0f, // 4
-        0.75f, 0.75f,   1.0f, 0.75f,   1.0f, 1.0f,   0.75f, 1.0f, // 8
+    std::array<std::array<GLfloat, 8>, 16> texCoords = { {
+        {0.0f, 0.75f,   0.25f, 0.75f,   0.25f, 1.0f,   0.0f, 1.0f}, // empty cell
+        {0.25f, 0.75f,   0.5f, 0.75f,   0.5f, 1.0f,   0.25f, 1.0f}, // 2
+        {0.5f, 0.75f,   0.75f, 0.75f,   0.75f, 1.0f,   0.5f, 1.0f}, // 4
+        {0.75f, 0.75f,   1.0f, 0.75f,   1.0f, 1.0f,   0.75f, 1.0f}, // 8
 
-        0.0f, 0.5f,   0.25f, 0.5f,   0.25f, 0.75f,   0.0f, 0.75f, // 16
-        0.25f, 0.5f,   0.5f, 0.5f,   0.5f, 0.75f,   0.25f, 0.75f, // 32
-        0.5f, 0.5f,   0.75f, 0.5f,   0.75f, 0.75f,   0.5f, 0.75f, // 64
-        0.75f, 0.5f,   1.0f, 0.5f,   1.0f, 0.75f,   0.75f, 0.75f, // 128
+        {0.0f, 0.5f,   0.25f, 0.5f,   0.25f, 0.75f,   0.0f, 0.75f}, // 16
+        {0.25f, 0.5f,   0.5f, 0.5f,   0.5f, 0.75f,   0.25f, 0.75f}, // 32
+        {0.5f, 0.5f,   0.75f, 0.5f,   0.75f, 0.75f,   0.5f, 0.75f}, // 64
+        {0.75f, 0.5f,   1.0f, 0.5f,   1.0f, 0.75f,   0.75f, 0.75f}, // 128
 
-        0.0f, 0.25f,   0.25f, 0.25f,   0.25f, 0.5f,   0.0f, 0.5f, // 256
-        0.25f, 0.25f,   0.5f, 0.25f,   0.5f, 0.5f,   0.25f, 0.5f, // 512
-        0.5f, 0.25f,   0.75f, 0.25f,   0.75f, 0.5f,   0.5f, 0.5f, // 1024
-        0.75f, 0.25f,   1.0f, 0.25f,   1.0f, 0.5f,   0.75f, 0.5f, // 2048
+        {0.0f, 0.25f,   0.25f, 0.25f,   0.25f, 0.5f,   0.0f, 0.5f}, // 256
+        {0.25f, 0.25f,   0.5f, 0.25f,   0.5f, 0.5f,   0.25f, 0.5f}, // 512
+        {0.5f, 0.25f,   0.75f, 0.25f,   0.75f, 0.5f,   0.5f, 0.5f}, // 1024
+        {0.75f, 0.25f,   1.0f, 0.25f,   1.0f, 0.5f,   0.75f, 0.5f}, // 2048
 
-        0.0f, 0.0f,   0.25f, 0.0f,   0.25f, 0.25f,   0.0f, 0.25f, // 4096
-        0.25f, 0.0f,   0.5f, 0.0f,   0.5f, 0.25f,   0.25f, 0.25f, // 8192
-        0.5f, 0.0f,   0.75f, 0.0f,   0.75f, 0.25f,   0.5f, 0.25f, // 16384
-        0.75f, 0.0f,   1.0f, 0.0f,   1.0f, 0.25f,   0.75f, 0.25f // 32768
-    };
-    std::shared_ptr<Texture> cellTexture;
+        {0.0f, 0.0f,   0.25f, 0.0f,   0.25f, 0.25f,   0.0f, 0.25f}, // 4096
+        {0.25f, 0.0f,   0.5f, 0.0f,   0.5f, 0.25f,   0.25f, 0.25f}, // 8192
+        {0.5f, 0.0f,   0.75f, 0.0f,   0.75f, 0.25f,   0.5f, 0.25f}, // 16384
+        {0.75f, 0.0f,   1.0f, 0.0f,   1.0f, 0.25f,   0.75f, 0.25f} // 32768
+    } };
+    std::unordered_map<int, std::shared_ptr<Sprite>> cellSpriteMap;
+    std::shared_ptr<ShaderProgram> cellShaderProg;
+    size_t cellWidthAndHeight;
 
     bool zPressed = false;
     bool ctrlPressed = false;
@@ -56,7 +59,6 @@ class Game2048 {
 
     void fieldInit();
     void showGame();
-    void showCellTex(size_t count);
     bool isCellInField(int x, int y);
     void generateNewCell();
     void savePreviousFieldState();
@@ -70,8 +72,6 @@ class Game2048 {
     void mergeCells(int x, int y, int dx, int dy);
 
 public:
-    Game2048(GLFWwindow* _window);
+    Game2048(GLFWwindow* _window, size_t width, size_t height);
     void run();
 };
-
-#endif // !__GAME2048_HPP__
