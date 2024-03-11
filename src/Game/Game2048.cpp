@@ -3,17 +3,9 @@
 Game2048::Game2048(GLFWwindow* _window, size_t width, size_t height) : window(_window), m_windowWidth(width), m_windowHeight(height) {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keysCallback);
-    srand(time(NULL));
+    srand(std::time(NULL));
 
-    cellWidthAndHeight = FlexibleSizes::getSize(m_windowWidth, FIELD_WIDTH);
-
-    std::shared_ptr<Texture> cellTexture = std::make_shared<Texture>("res/textures/cells.png");
-    cellShaderProg = std::make_shared<ShaderProgram>("res/shaders/vSprite.txt", "res/shaders/fSprite.txt");
-    for (size_t i = 0, j = 0; j < texCoords.size(); i <<= 1, j++) {
-        cellSpriteMap[i] = std::make_shared<Sprite>(cellTexture, cellShaderProg, glm::vec2(0.f), glm::vec2(cellWidthAndHeight), 0.f, texCoords[j]);
-        if (i == 0) i++;
-    }
-
+    loadResources();
     fieldInit();
 }
 
@@ -27,6 +19,23 @@ void Game2048::run() {
     }
 }
 
+void Game2048::loadResources() {
+    cellWidthAndHeight = FlexibleSizes::getSize(m_windowWidth, FIELD_WIDTH);
+
+    std::shared_ptr<Texture> cellTexture = std::make_shared<Texture>("res/textures/cells.png");
+    cellShaderProg = std::make_shared<ShaderProgram>("res/shaders/vSprite.txt", "res/shaders/fSprite.txt");
+    for (size_t i = 0, j = 0; j < texCoords.size(); i <<= 1, j++) {
+        cellSpriteMap[i] = std::make_shared<Sprite>(cellTexture, cellShaderProg, glm::vec2(0.f), glm::vec2(cellWidthAndHeight), 0.f, texCoords[j]);
+        if (i == 0) i++;
+    }
+
+    cellShaderProg->use();
+    cellShaderProg->setInt("tex", 0);
+
+    glm::mat4 projectionMatrix = glm::ortho(0.f, static_cast<float>(m_windowWidth), 0.f, static_cast<float>(m_windowHeight), -1.f, 1.f);
+    cellShaderProg->setMatrix4("projectionMat", projectionMatrix);
+}
+
 void Game2048::fieldInit() {
     std::memset(field, 0, sizeof(field));
     generateNewCell();
@@ -35,12 +44,6 @@ void Game2048::fieldInit() {
 }
 
 void Game2048::showGame() {
-    cellShaderProg->use();
-    cellShaderProg->setInt("tex", 0);
-
-    glm::mat4 projectionMatrix = glm::ortho(0.f, static_cast<float>(m_windowWidth), 0.f, static_cast<float>(m_windowHeight), -1.f, 1.f);
-    cellShaderProg->setMatrix4("projectionMat", projectionMatrix);
-
     for (size_t j = 0; j < FIELD_HEIGHT; j++) {
         for (size_t i = 0; i < FIELD_WIDTH; i++) {
             cellSpriteMap[field[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));

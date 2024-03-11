@@ -57,6 +57,7 @@ class Game2048 {
     bool shouldBeFieldStateSaved = false;
     bool gameOver = false;
 
+    void loadResources();
     void fieldInit();
     void showGame();
     bool isCellInField(int x, int y);
