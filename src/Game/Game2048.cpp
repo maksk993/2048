@@ -11,11 +11,18 @@ Game2048::Game2048(GLFWwindow* _window, size_t width, size_t height) : window(_w
 
 void Game2048::run() {
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+        update();
 
         showGame();
 
         glfwSwapBuffers(window);
+    }
+}
+
+void Game2048::update() {
+    if (m_currentAnimation == EAnimations::NONE) {
+        if (shouldNewCellBeGenerated) generateNewCell();
+        glfwPollEvents();
     }
 }
 
@@ -37,19 +44,161 @@ void Game2048::loadResources() {
 }
 
 void Game2048::fieldInit() {
-    std::memset(field, 0, sizeof(field));
+    m_currentAnimation = EAnimations::NONE;
+
+    field.clear();
+    field.resize(FIELD_HEIGHT);
+    for (size_t i = 0; i < FIELD_HEIGHT; i++) {
+        field[i].resize(FIELD_WIDTH);
+    }
+
     generateNewCell();
     generateNewCell();
     savePreviousFieldState();
 }
 
 void Game2048::showGame() {
+    for (size_t j = 0; j < FIELD_HEIGHT; j++) // empty field
+        for (size_t i = 0; i < FIELD_WIDTH; i++) {
+            cellSpriteMap[0]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+            cellSpriteMap[0]->render();
+        }
+
     for (size_t j = 0; j < FIELD_HEIGHT; j++) {
         for (size_t i = 0; i < FIELD_WIDTH; i++) {
-            cellSpriteMap[field[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
-            cellSpriteMap[field[j][i].count]->render();
+            if (m_currentAnimation == EAnimations::NONE && field[j][i].have_count) {
+                cellSpriteMap[field[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+                cellSpriteMap[field[j][i].count]->render();
+            }
+            else {
+                static float k = 0.f;
+                int l;
+                switch (m_currentAnimation) {
+                case EAnimations::LEFT:
+                    if (previousFieldState[j][i].have_count) animationLeft(j, i, k);
+                    break;
+
+                case EAnimations::RIGHT:
+                    if (previousFieldState[j][i].have_count) animationRight(j, i, k);
+                    break;
+
+                case EAnimations::DOWN:
+                    if (previousFieldState[j][i].have_count) animationDown(j, i, k);
+                    break;
+
+                case EAnimations::UP:
+                    if (previousFieldState[j][i].have_count) animationUp(j, i, k);
+                    break;
+                }
+                if (previousFieldState[j][i].have_count)
+                    cellSpriteMap[previousFieldState[j][i].count]->render();
+            }
         }
     }
+}
+
+void Game2048::animationLeft(int j, int i, float& k) {
+    if (j == 0 || (j > 0 && previousFieldState[j - 1][i].have_count && previousFieldState[j - 1][i].count != previousFieldState[j][i].count)) {
+        cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+        return;
+    }
+    else if (k <= (FIELD_WIDTH - 1) * cellWidthAndHeight) {
+        int x = j;
+        while (j > 0 && x >= 0 && field[x][i].count != previousFieldState[j][i].count && field[x][i].count != previousFieldState[j][i].count << 1) {
+            x--;
+        }
+        if (k > (j - x) * cellWidthAndHeight) {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight - (j - x) * cellWidthAndHeight, i * cellWidthAndHeight));
+        }
+        else {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight - k, i * cellWidthAndHeight));
+        }
+        k += 2.f;
+    }
+    else {
+        m_currentAnimation = EAnimations::NONE;
+        k = 0.f;
+    }
+}
+
+void Game2048::animationRight(int j, int i, float& k) {
+    if (j == FIELD_WIDTH - 1 || (j < FIELD_WIDTH - 1 && previousFieldState[j + 1][i].have_count && previousFieldState[j + 1][i].count != previousFieldState[j][i].count)) {
+        cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+        return;
+    }
+    else if (k <= (FIELD_WIDTH - 1) * cellWidthAndHeight) {
+        int x = j;
+        while (j < FIELD_WIDTH - 1 && x < FIELD_WIDTH && field[x][i].count != previousFieldState[j][i].count && field[x][i].count != previousFieldState[j][i].count << 1) {
+            x++;
+        }
+        if (k > (x - j) * cellWidthAndHeight) {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight + (x - j) * cellWidthAndHeight, i * cellWidthAndHeight));
+        }
+        else {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight + k, i * cellWidthAndHeight));
+        }
+        k += 2.f;
+    }
+    else {
+        m_currentAnimation = EAnimations::NONE;
+        k = 0.f;
+    }
+}
+
+void Game2048::animationDown(int j, int i, float& k) {
+    if (i == 0 || (i > 0 && previousFieldState[j][i - 1].have_count && previousFieldState[j][i - 1].count != previousFieldState[j][i].count)) {
+        cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+        return;
+    }
+    else if (k <= (FIELD_HEIGHT - 1) * cellWidthAndHeight) {
+        int x = i;
+        while (i > 0 && x >= 0 && field[j][x].count != previousFieldState[j][i].count && field[j][x].count != previousFieldState[j][i].count << 1) {
+            x--;
+        }
+        if (k > (i - x) * cellWidthAndHeight) {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight - (i - x) * cellWidthAndHeight));
+        }
+        else {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight - k));
+        }
+        k += 2.f;
+    }
+    else {
+        m_currentAnimation = EAnimations::NONE;
+        k = 0.f;
+    }
+}
+
+void Game2048::animationUp(int j, int i, float& k) {
+    if (i == FIELD_HEIGHT - 1 || (i < FIELD_HEIGHT - 1 && previousFieldState[j][i + 1].have_count && previousFieldState[j][i + 1].count != previousFieldState[j][i].count)) {
+        cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight));
+        return;
+    }
+    else if (k <= (FIELD_HEIGHT - 1) * cellWidthAndHeight) {
+        int x = i;
+        while (i < FIELD_HEIGHT - 1 && x < FIELD_HEIGHT && field[j][x].count != previousFieldState[j][i].count && field[j][x].count != previousFieldState[j][i].count << 1) {
+            x++;
+        }
+        if (k > (x - i) * cellWidthAndHeight) {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight + (x - i) * cellWidthAndHeight));
+        }
+        else {
+            cellSpriteMap[previousFieldState[j][i].count]->setPosition(glm::vec2(j * cellWidthAndHeight, i * cellWidthAndHeight + k));
+        }
+        k += 2.f;
+    }
+    else {
+        m_currentAnimation = EAnimations::NONE;
+        k = 0.f;
+    }
+}
+
+int Game2048::getNumberOfUsedCells() {
+    int num = 0;
+    for (size_t j = 0; j < FIELD_HEIGHT; j++)
+        for (size_t i = 0; i < FIELD_WIDTH; i++)
+            if (field[j][i].have_count) num++;
+    return num;
 }
 
 bool Game2048::isCellInField(int x, int y) {
@@ -57,7 +206,7 @@ bool Game2048::isCellInField(int x, int y) {
 }
 
 void Game2048::generateNewCell() {
-    for (size_t i = 0; i < 1; i++) {
+    for (int i = 0; i < 1; i++) {
         int x = rand() % FIELD_WIDTH;
         int y = rand() % FIELD_HEIGHT;
         if (field[x][y].have_count) i--;
@@ -67,12 +216,12 @@ void Game2048::generateNewCell() {
             else field[x][y].count = 4;
         }
     }
+    shouldNewCellBeGenerated = false;
+    NumberOfUsedCells = getNumberOfUsedCells();
 }
 
 void Game2048::savePreviousFieldState() {
-    for (int j = 0; j < FIELD_HEIGHT; j++)
-        for (int i = 0; i < FIELD_WIDTH; i++)
-            previousFieldState[i][j] = field[i][j];
+    previousFieldState = field;
 }
 
 void Game2048::loadPreviousFieldState() {
@@ -120,8 +269,8 @@ void Game2048::keysCallback(GLFWwindow* window, int key, int scancode, int actio
 }
 
 void Game2048::handleKey(int key, int action) {
-    shouldBeNewCellGenerated = false;
-    shouldBeFieldStateSaved = true;
+    shouldNewCellBeGenerated = false;
+    shouldFieldStateBeSaved = true;
 
     if (key == GLFW_KEY_LEFT && action == GLFW_PRESS && !gameOver) { // left
         for (size_t j = 0; j < FIELD_HEIGHT; j++)
@@ -177,8 +326,7 @@ void Game2048::handleKey(int key, int action) {
         loadPreviousFieldState();
     }
 
-    if (shouldBeNewCellGenerated) generateNewCell();
-    else if (!areThereAnyPossibleMoves()) gameOver = true;
+    if (!areThereAnyPossibleMoves()) gameOver = true;
 
     if (gameOver && (key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT || key == GLFW_KEY_UP || key == GLFW_KEY_DOWN) && action == GLFW_PRESS) {
         restartGame();
@@ -187,12 +335,16 @@ void Game2048::handleKey(int key, int action) {
 
 void Game2048::moveCell(int x, int y, int dx, int dy) {
     if (x + dx >= 0 && x + dx < FIELD_WIDTH && y + dy >= 0 && y + dy < FIELD_HEIGHT && !field[x + dx][y + dy].have_count) {
-        if (shouldBeFieldStateSaved) { // save #1
+        if (shouldFieldStateBeSaved) { // save #1
             savePreviousFieldState();
-            shouldBeFieldStateSaved = false;
+            shouldFieldStateBeSaved = false;
         }
         std::swap(field[x][y], field[x + dx][y + dy]);
-        shouldBeNewCellGenerated = true;
+        shouldNewCellBeGenerated = true;
+        if (dx < 0)  m_currentAnimation = EAnimations::LEFT;
+        else if (dx > 0) m_currentAnimation = EAnimations::RIGHT;
+        else if (dy < 0) m_currentAnimation = EAnimations::DOWN;
+        else m_currentAnimation = EAnimations::UP;
         moveCell(x + dx, y + dy, dx, dy);
     }
 }
@@ -210,14 +362,18 @@ std::pair<int, int> Game2048::getNewCellPosition(int x, int y, int key, int coun
 void Game2048::mergeCells(int x, int y, int dx, int dy) {
     while (x + dx >= 0 && x + dx < FIELD_WIDTH && y + dy >= 0 && y + dy < FIELD_HEIGHT && (field[x][y].count == field[x + dx][y + dy].count || !field[x + dx][y + dy].have_count)) {
         if (field[x][y].count == field[x + dx][y + dy].count) {
-            if (shouldBeFieldStateSaved) { // save #2
+            if (shouldFieldStateBeSaved) { // save #2
                 savePreviousFieldState();
-                shouldBeFieldStateSaved = false;
+                shouldFieldStateBeSaved = false;
             }
             field[x][y].count <<= 1;
             field[x + dx][y + dy].count = 0;
             field[x + dx][y + dy].have_count = false;
-            shouldBeNewCellGenerated = true;
+            shouldNewCellBeGenerated = true;
+            if (dx > 0)  m_currentAnimation = EAnimations::LEFT;
+            else if (dx < 0) m_currentAnimation = EAnimations::RIGHT;
+            else if (dy > 0) m_currentAnimation = EAnimations::DOWN;
+            else m_currentAnimation = EAnimations::UP;
             break;
         }
         if (dx < 0) dx--;
